@@ -1,0 +1,2 @@
+Some invoices are a cent short. One line at 8.20 with our 7.5% tax rate totals 8.81; accounting says 8.82. Most invoices are fine.
+Repository: https://github.com/diggerhq/opencomputer-example-bug-repro, path fixture.

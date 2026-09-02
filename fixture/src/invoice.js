@@ -1,4 +1,5 @@
 // A small billing module. Amounts are numbers in major currency units.
+// It has two bugs on purpose; the reports in ../reports describe them. Do not fix them.
 
 export function round2(value) {
   return Math.round(value * 100) / 100;

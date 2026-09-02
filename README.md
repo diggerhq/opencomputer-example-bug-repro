@@ -81,7 +81,7 @@ four runs below are taken from the event log of one deployment.
 ## 1. A report gets the shell and produces a failing test
 
 ```text
-$ npx opencomputer session --verbose "Reproduce this bug. Repository: https://github.com/diggerhq/opencomputer-example-bug-repro path fixture. Report: Some invoices are a cent short. Example from accounting: one line at 8.20 with our 7.5% tax rate shows a total of 8.81. Their spreadsheet says 8.82. Most invoices are fine, so it is not every amount."
+$ npx opencomputer session --verbose "$(cat fixture/reports/tax-off-by-a-cent.txt)"
 
 agent.rendered  providerTurn 1  enabledTools [glob, grep, read, shell, write]
 shell           git clone --depth 1 https://github.com/diggerhq/opencomputer-example-bug-repro repo
@@ -133,7 +133,7 @@ npx opencomputer webhooks create bug-reports --agent bug-repro --environment dev
 curl -X POST 'https://app.opencomputer.dev/api/agent-webhooks/wh_...' \
   -H 'Authorization: Bearer ocwh_...' -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: report-2-delivery-1' \
-  -d '{"payload":{"report":"In checkout, previewing a 10% coupon and then closing the preview without applying it leaves the invoice at the discounted price. Reloading does not restore the original amounts. Repository: https://github.com/diggerhq/opencomputer-example-bug-repro, path fixture."}}'
+  --data-binary @fixture/reports/coupon-preview.json
 ```
 
 ```text
@@ -227,9 +227,9 @@ list that every render is checked against.
 opencomputer/project.ts                  lists the project's agents
 opencomputer/agents/bug-repro/agent.ts   the function and its two prompts
 opencomputer/agents/bug-repro/opencode.json   harness tools this agent may select
-fixture/src/invoice.js                   a billing module with two bugs
+fixture/src/invoice.js                   a billing module with two bugs, on purpose
 fixture/test/invoice.test.js             the existing suite; passes with both bugs present
-fixture/BUG-REPORTS.md                   the two reports
+fixture/reports/                         the two reports: one as text for the CLI, one as a webhook body
 DX-NOTES.md                              observations from building this against the live platform
 ```
 

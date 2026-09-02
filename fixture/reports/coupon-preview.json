@@ -1,0 +1,5 @@
+{
+  "payload": {
+    "report": "Previewing a 10% coupon in checkout and closing the preview without applying it leaves the invoice at the discounted price. Reloading does not restore it. Repository: https://github.com/diggerhq/opencomputer-example-bug-repro, path fixture."
+  }
+}
