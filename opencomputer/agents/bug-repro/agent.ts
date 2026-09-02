@@ -7,7 +7,7 @@ export default function Agent() {
   const payload = (input.payload ?? {}) as { report?: string };
   const report = payload.report ?? input.text ?? "";
 
-  useModel("anthropic/claude-sonnet-4.6");
+  useModel("google/gemini-3.8-flash");
 
   if (report.includes("github.com/")) {
     // A repository is named: attach the harness's shell and filesystem.

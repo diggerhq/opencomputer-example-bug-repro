@@ -33,7 +33,7 @@ export default function Agent() {
   // Omitted here: the file also reads the report from payload.report (webhooks).
   const report = useInput().text ?? "";
 
-  useModel("anthropic/claude-sonnet-4.6");
+  useModel("google/gemini-3.8-flash");
 
   if (report.includes("github.com/")) {
     // A repository is named: attach the harness's shell and filesystem.
