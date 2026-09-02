@@ -26,32 +26,59 @@ What the example shows:
 ## The agent
 
 ```ts
-// opencomputer/agents/bug-repro/agent.ts (trimmed; the file is 90 lines)
-import { useInput, useModel, useTool } from "@opencomputer/agent";
+// opencomputer/agents/bug-repro/agent.ts
+import {
+  useInput,
+  useModel,
+  useTool,
+  type AgentInput,
+  type DataValue,
+} from "@opencomputer/agent";
+import { conversation, reproduction, type BugReport } from "./instructions.js";
+
+const GITHUB_URL = /https?:\/\/github\.com\/[\w-]+\/[\w.-]*[\w-]/;
+
+const isObject = (value: DataValue | undefined): value is { readonly [key: string]: DataValue } =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// A report arrives as a structured payload (webhook, API) or as text that
+// contains a GitHub URL (playground, CLI). Anything else is conversation.
+function parse({ text, payload }: AgentInput): BugReport | undefined {
+  if (isObject(payload) && typeof payload.repository === "string") {
+    return {
+      repository: payload.repository,
+      path: typeof payload.path === "string" ? payload.path : undefined,
+      report: typeof payload.report === "string" ? payload.report : (text ?? ""),
+    };
+  }
+  const repository = text?.match(GITHUB_URL)?.[0];
+  return repository && text ? { repository, report: text } : undefined;
+}
 
 export default function Agent() {
   const input = useInput();
-  const request = bugReport(input.text, input.payload); // { repository, path, report }
+  const report = parse(input);
 
   useModel("anthropic/claude-sonnet-4.6");
 
-  if (!request.repository) {
-    return "Your only job is to reproduce bug reports against public Git repositories, and this request names none. Ask for the repository URL and the report text.";
-  }
+  if (!report) return conversation(input.text);
 
+  // Harness tools, registered in opencode.json. The names are literals
+  // because the compiler reads them to build the deployment's tool registry.
   useTool("shell");
   useTool("read");
   useTool("write");
   useTool("glob");
   useTool("grep");
 
-  return `You reproduce bug reports. You have a shell, a filesystem, and network access for unauthenticated requests.
-Repository: ${request.repository}
-Report: ${request.report}
-Clone with git. Read the existing tests first. Write the smallest failing test in the repository's own convention. Run it. If it passes, try the boundary cases the report implies.
-Answer with: Reproduced, Failing test, Observed vs expected, Where, Likely cause. Do not fix the bug.`;
+  return reproduction(report);
 }
 ```
+
+`instructions.ts` exports the two prompts as template literals:
+`conversation(text)` for a message without a repository, and
+`reproduction({ repository, path, report })` with the clone, read, write,
+run, and answer-format steps.
 
 ```json
 // opencomputer/agents/bug-repro/opencode.json
@@ -218,8 +245,9 @@ list that every render is checked against.
 
 ```text
 opencomputer/project.ts                  lists the project's agents
-opencomputer/agents/bug-repro/agent.ts   the function
-opencomputer/agents/bug-repro/opencode.json
+opencomputer/agents/bug-repro/agent.ts   the function: parse the input, select tools
+opencomputer/agents/bug-repro/instructions.ts   the two prompts
+opencomputer/agents/bug-repro/opencode.json     harness tools this agent may select
 fixture/src/invoice.js                   a billing module with two bugs
 fixture/test/invoice.test.js             the existing suite; passes with both bugs present
 fixture/BUG-REPORTS.md                   the two reports
