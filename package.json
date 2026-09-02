@@ -1,0 +1,24 @@
+{
+  "name": "opencomputer-example-bug-repro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "opencomputer": "opencomputer",
+    "typecheck": "tsc --noEmit",
+    "test:fixture": "node --test fixture/test/*.test.js",
+    "deploy": "opencomputer deploy",
+    "session": "opencomputer session"
+  },
+  "dependencies": {
+    "@opencomputer/agent": "^0.5.2"
+  },
+  "devDependencies": {
+    "@opencomputer/cli": "^0.6.6",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
