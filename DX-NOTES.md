@@ -45,3 +45,19 @@ hash, one per model step, visible in `session --verbose` and `sessions tail
 resumed it (runtime epoch 2) and the clone at `/tmp/opencode/repo` was still
 there. Webhook delivery with a repeated `Idempotency-Key` returned the same
 session with `"duplicate": true`.
+
+## 006 — runtime dropped mid-turn after a burst of deployments (platform, 2026-09-02 ~22:00 UTC)
+
+After nine one-shot `deploy` runs in about forty minutes (each verified with
+a greeting session, all fine), report sessions stopped completing. Three
+CLI runs between 21:57 and 22:05 ended with "The operation was aborted due
+to timeout" and no session in `session list`. The next run created session
+`41622a70-4c1e-45a0-b83c-ae8ee996c87a` at 22:08:58, rendered the five tools,
+ran two `shell` and five `read` calls, then at 22:09:21 logged
+`runtime.disconnected` with two reads in flight and moved to
+`waiting_runtime`. `agent.rendered` events kept arriving for provider turns
+4 to 8 until 22:10:00, so the VM was still working; the session actor had
+lost it. After 75 s the session was still `waiting_runtime`, turn `queued`.
+Greeting sessions on the same deployment succeeded throughout, in about 19 s.
+Not reproduced deliberately; the correlation with the deploy burst is a
+guess. Earlier report runs on the same code shape completed in 55 to 60 s.
