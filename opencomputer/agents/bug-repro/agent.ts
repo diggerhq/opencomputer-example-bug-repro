@@ -1,18 +1,16 @@
 import { useInput, useModel, useTool } from "@opencomputer/agent";
-import { conversation, reproduction, type BugReport } from "./instructions.js";
-
-const GITHUB_URL = /https?:\/\/github\.com\/[\w-]+\/[\w.-]*[\w-]/;
+import { conversation, reproduction } from "./instructions.js";
 
 export default function Agent() {
   const input = useInput();
-  // A report arrives as a payload (webhook, API) or as text containing a
-  // GitHub URL (playground, CLI). Anything else is conversation.
-  const payload = (input.payload ?? {}) as Partial<BugReport>;
-  const repository = payload.repository ?? input.text?.match(GITHUB_URL)?.[0];
+  // The report is the payload's `report` field (webhook, API) or the text
+  // itself (playground, CLI). It names the repository by its GitHub URL.
+  const payload = (input.payload ?? {}) as { report?: string };
+  const report = payload.report ?? input.text ?? "";
 
   useModel("anthropic/claude-sonnet-4.6");
 
-  if (!repository) return conversation(input.text);
+  if (!report.includes("github.com/")) return conversation(report);
 
   // Harness tools, registered in opencode.json. The names are literals
   // because the compiler reads them to build the deployment's tool registry.
@@ -22,9 +20,5 @@ export default function Agent() {
   useTool("glob");
   useTool("grep");
 
-  return reproduction({
-    repository,
-    path: payload.path,
-    report: payload.report ?? input.text ?? "",
-  });
+  return reproduction(report);
 }

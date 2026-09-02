@@ -28,20 +28,18 @@ What the example shows:
 ```ts
 // opencomputer/agents/bug-repro/agent.ts
 import { useInput, useModel, useTool } from "@opencomputer/agent";
-import { conversation, reproduction, type BugReport } from "./instructions.js";
-
-const GITHUB_URL = /https?:\/\/github\.com\/[\w-]+\/[\w.-]*[\w-]/;
+import { conversation, reproduction } from "./instructions.js";
 
 export default function Agent() {
   const input = useInput();
-  // A report arrives as a payload (webhook, API) or as text containing a
-  // GitHub URL (playground, CLI). Anything else is conversation.
-  const payload = (input.payload ?? {}) as Partial<BugReport>;
-  const repository = payload.repository ?? input.text?.match(GITHUB_URL)?.[0];
+  // The report is the payload's `report` field (webhook, API) or the text
+  // itself (playground, CLI). It names the repository by its GitHub URL.
+  const payload = (input.payload ?? {}) as { report?: string };
+  const report = payload.report ?? input.text ?? "";
 
   useModel("anthropic/claude-sonnet-4.6");
 
-  if (!repository) return conversation(input.text);
+  if (!report.includes("github.com/")) return conversation(report);
 
   // Harness tools, registered in opencode.json. The names are literals
   // because the compiler reads them to build the deployment's tool registry.
@@ -51,18 +49,14 @@ export default function Agent() {
   useTool("glob");
   useTool("grep");
 
-  return reproduction({
-    repository,
-    path: payload.path,
-    report: payload.report ?? input.text ?? "",
-  });
+  return reproduction(report);
 }
 ```
 
 `instructions.ts` exports the two prompts as template literals:
-`conversation(text)` for a message without a repository, and
-`reproduction({ repository, path, report })` with the clone, read, write,
-run, and answer-format steps.
+`conversation(text)` for a message that names no repository, and
+`reproduction(report)` with the clone, read, write, run, and answer-format
+steps.
 
 ```json
 // opencomputer/agents/bug-repro/opencode.json
@@ -134,10 +128,7 @@ npx opencomputer webhooks create bug-reports --agent bug-repro --environment dev
 curl -X POST 'https://app.opencomputer.dev/api/agent-webhooks/wh_...' \
   -H 'Authorization: Bearer ocwh_...' -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: report-2-delivery-1' \
-  -d '{"text":"Reproduce report 2.","payload":{
-        "repository":"https://github.com/diggerhq/opencomputer-example-bug-repro",
-        "path":"fixture",
-        "report":"In checkout, previewing a 10% coupon and then closing the preview without applying it leaves the invoice at the discounted price. Reloading does not restore the original amounts."}}'
+  -d '{"payload":{"report":"In checkout, previewing a 10% coupon and then closing the preview without applying it leaves the invoice at the discounted price. Reloading does not restore the original amounts. Repository: https://github.com/diggerhq/opencomputer-example-bug-repro, path fixture."}}'
 ```
 
 ```text
@@ -204,8 +195,8 @@ npx opencomputer deploy --watch --create-project bug-repro
 Run the four scenarios from a second terminal. For run 4, take the session
 id from `npx opencomputer session list`.
 
-To use another repository, put its URL and the report in the session text,
-or send them as `payload.repository`, `payload.path`, and `payload.report`.
+To use another repository, put its URL in the report, in the session text
+or in `payload.report`.
 
 ## Inspect a session
 
