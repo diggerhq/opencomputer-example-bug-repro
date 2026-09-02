@@ -111,8 +111,8 @@ like me to investigate.
 ```
 
 Same deployment. The render selected no tools, so the model request
-contained none. The shell exists in the harness; it was not in the room for
-this step.
+contained none. The shell exists in the harness; it was not in the model
+request for this step.
 
 ## 3. A webhook payload selects the same tools; a repeated delivery returns the same session
 
