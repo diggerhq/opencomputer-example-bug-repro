@@ -50,9 +50,8 @@ function reproductionPrompt(report: string) { return `…`; }
 ```
 
 ```json
-// opencomputer/agents/bug-repro/opencode.json
-{ "tools": { "shell": true, "read": true, "write": true, "glob": true, "grep": true },
-  "permission": { "shell": "allow", "read": "allow", "write": "allow", "external_directory": "allow" } }
+// opencomputer/agents/bug-repro/opencode.json, simplified: the file also registers read, write, glob, grep
+{ "tools": { "shell": true }, "permission": { "shell": "allow" } }
 ```
 
 Two levels. `opencode.json` registers the harness tools this agent's
