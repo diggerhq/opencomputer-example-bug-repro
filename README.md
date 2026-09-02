@@ -26,26 +26,17 @@ What the example shows:
 ## The agent
 
 ```ts
-// opencomputer/agents/bug-repro/agent.ts
+// opencomputer/agents/bug-repro/agent.ts, simplified. The file is 49 lines.
 import { useInput, useModel, useTool } from "@opencomputer/agent";
 
 export default function Agent() {
-  const input = useInput();
-  // The report is the payload's `report` field (webhook, API) or the text
-  // itself (playground, CLI). It names the repository by its GitHub URL.
-  const payload = (input.payload ?? {}) as { report?: string };
-  const report = payload.report ?? input.text ?? "";
+  const report = useInput().text ?? ""; // the file also reads payload.report (webhooks)
 
   useModel("anthropic/claude-sonnet-4.6");
 
   if (report.includes("github.com/")) {
     // A repository is named: attach the harness's shell and filesystem.
-    // Registered in opencode.json; literal names, read by the compiler.
-    useTool("shell");
-    useTool("read");
-    useTool("write");
-    useTool("glob");
-    useTool("grep");
+    useTool("shell"); // the file also selects read, write, glob, grep
     return reproductionPrompt(report);
   } else {
     // No repository: conversation. The model request carries no tools.
@@ -53,14 +44,9 @@ export default function Agent() {
   }
 }
 
-// Prompts omitted for brevity; see agent.ts for the full text.
-function conversationPrompt(text: string) {
-  return `…`;
-}
-
-function reproductionPrompt(report: string) {
-  return `…`;
-}
+// Prompts omitted; see agent.ts.
+function conversationPrompt(text: string) { return `…`; }
+function reproductionPrompt(report: string) { return `…`; }
 ```
 
 ```json
