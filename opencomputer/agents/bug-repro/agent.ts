@@ -9,17 +9,19 @@ export default function Agent() {
 
   useModel("anthropic/claude-sonnet-4.6");
 
-  if (!report.includes("github.com/")) return conversationPrompt(report);
-
-  // Harness tools, registered in opencode.json. The names are literals
-  // because the compiler reads them to build the deployment's tool registry.
-  useTool("shell");
-  useTool("read");
-  useTool("write");
-  useTool("glob");
-  useTool("grep");
-
-  return reproductionPrompt(report);
+  if (report.includes("github.com/")) {
+    // A repository is named: attach the harness's shell and filesystem.
+    // Registered in opencode.json; literal names, read by the compiler.
+    useTool("shell");
+    useTool("read");
+    useTool("write");
+    useTool("glob");
+    useTool("grep");
+    return reproductionPrompt(report);
+  } else {
+    // No repository: conversation. The model request carries no tools.
+    return conversationPrompt(report);
+  }
 }
 
 function conversationPrompt(text: string) {
