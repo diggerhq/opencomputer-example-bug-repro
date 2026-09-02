@@ -6,11 +6,24 @@ Input: a bug report and the URL of a public Git repository. Output: a
 failing test written in the repository's own test convention, the test
 runner's output, the file and line responsible, and a likely cause.
 
-The agent is one function, `agent.ts`. It defines no tools of its own and
-uses no secrets. It selects tools from the managed harness, a coding agent
-with a shell and a filesystem that runs in a VM per session. The function
-runs before every model step and decides which harness tools the model gets
-for that step.
+Triage starts with "does this reproduce, and where". Answering that takes a
+checkout, a test runner, and a few iterations. A model with declared
+read-only tools can read the code and guess; this agent runs it.
+
+What the example shows:
+
+- The managed harness is a complete coding agent in a VM per session: a
+  shell, a filesystem, git, node, and network access. Any agent can select
+  those tools. This one defines no tools of its own and uses no secrets.
+- The agent function runs before every model step and selects the tools for
+  that step. One deployment behaves as a chat agent or a coding agent
+  depending on the input.
+- Sessions are durable. The workspace, including a clone and the tests the
+  agent wrote, survives the VM suspending and resuming.
+- A webhook payload reaches the same function as a typed message. Delivery
+  is idempotent.
+
+## The agent
 
 ```ts
 // opencomputer/agents/bug-repro/agent.ts (trimmed; the file is 90 lines)
@@ -41,16 +54,21 @@ Answer with: Reproduced, Failing test, Observed vs expected, Where, Likely cause
 ```
 
 ```json
-// opencomputer/agents/bug-repro/opencode.json: harness tools this agent may select
+// opencomputer/agents/bug-repro/opencode.json
 { "tools": { "shell": true, "read": true, "write": true, "glob": true, "grep": true },
   "permission": { "shell": "allow", "read": "allow", "write": "allow", "external_directory": "allow" } }
 ```
+
+Two levels. `opencode.json` registers the harness tools this agent's
+deployment may use at all. The function selects from that set for each
+model step. A tool that is not registered cannot be selected; a tool that is
+not selected is absent from the model request, not merely discouraged.
 
 Each run of the function is recorded as an `agent.rendered` event, with the
 selected tools and the instructions hash, before the model is called. The
 four runs below are taken from the event log of one deployment.
 
-## 1. A report
+## 1. A report gets the shell and produces a failing test
 
 ```text
 $ npx opencomputer session --verbose "Reproduce this bug. Repository: https://github.com/diggerhq/opencomputer-example-bug-repro path fixture. Report: Some invoices are a cent short. Example from accounting: one line at 8.20 with our 7.5% tax rate shows a total of 8.81. Their spreadsheet says 8.82. Most invoices are fine, so it is not every amount."
@@ -76,10 +94,11 @@ Likely cause: 8.20 * 0.075 is 0.6149999999999999 in IEEE 754, just below 0.615,
   so Math.round gives 0.61 instead of 0.62 and the total is 8.81.
 ```
 
-The turn took eight model steps and 55 seconds. The test file remains in
-the session's workspace.
+One turn, eight model steps, 55 seconds. The function ran eight times, once
+before each step, and produced the same record each time because the input
+had not changed. The test file remains in the session's workspace.
 
-## 2. No repository
+## 2. A message without a repository gets no tools
 
 ```text
 $ npx opencomputer session --verbose "hi, what do you do?"
@@ -92,9 +111,10 @@ like me to investigate.
 ```
 
 Same deployment. The render selected no tools, so the model request
-contained none.
+contained none. The shell exists in the harness; it was not in the room for
+this step.
 
-## 3. Report 2 through a webhook, delivered twice
+## 3. A webhook payload selects the same tools; a repeated delivery returns the same session
 
 ```bash
 npx opencomputer webhooks create bug-reports --agent bug-repro --environment development
@@ -125,11 +145,12 @@ Likely cause: withCoupon shallow-copies the invoice ({ ...invoice }); lines is
   the same array, and forEach mutates each line's unitPrice in place.
 ```
 
+Webhooks are created outside the code and do not change with deployments.
 The payload names the repository, so the function selects the same tools as
 in run 1. A second delivery with the same `Idempotency-Key` returns the
 original session instead of starting another one.
 
-## 4. A follow-up in session 1 after it suspended
+## 4. A suspended session resumes with its workspace
 
 ```text
 $ npx opencomputer session send 56d3d45e-… --verbose "Same repository: https://github.com/diggerhq/opencomputer-example-bug-repro path fixture. Follow-up: does lineTotal have the same rounding problem for unitPrice 2.675 and quantity 1? Reuse the existing clone if present."
@@ -144,8 +165,9 @@ Likely cause: 2.675 is stored just below 2.675, but 2.675 * 100 lands exactly on
   267.5 in IEEE 754; the two rounding errors cancel and Math.round rounds up.
 ```
 
-The workspace and the conversation persist with the session across suspend
-and resume.
+The session suspended about a second after run 1 ended. The follow-up
+resumed the VM with the clone and the conversation intact. The agent tested
+the new case and reported that it does not reproduce, with the reason.
 
 The function reads the input of the current turn only, not the
 conversation. A follow-up that omits the repository URL renders as in run 2
@@ -167,9 +189,9 @@ npx opencomputer deploy --watch --create-project bug-repro
 ```
 
 `deploy --watch` builds the agent, creates the project, deploys to
-`development`, and redeploys on each save. Run the four scenarios from a
-second terminal. For run 4, take the session id from
-`npx opencomputer session list`.
+`development`, and redeploys on each save. There is no local agent server.
+Run the four scenarios from a second terminal. For run 4, take the session
+id from `npx opencomputer session list`.
 
 To use another repository, put its URL and the report in the session text,
 or send them as `payload.repository`, `payload.path`, and `payload.report`.
