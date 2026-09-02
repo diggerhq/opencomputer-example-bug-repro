@@ -148,7 +148,7 @@ Likely cause: withCoupon shallow-copies the invoice ({ ...invoice }); lines is
 ```
 
 Webhooks are created outside the code and do not change with deployments.
-The payload names the repository, so the function selects the same tools as
+The report in the payload names the repository, so the function selects the same tools as
 in run 1. A second delivery with the same `Idempotency-Key` returns the
 original session instead of starting another one.
 
