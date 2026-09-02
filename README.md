@@ -26,17 +26,19 @@ What the example shows:
 ## The agent
 
 ```ts
-// opencomputer/agents/bug-repro/agent.ts, simplified. The file is 49 lines.
+// Simplified excerpt of opencomputer/agents/bug-repro/agent.ts.
 import { useInput, useModel, useTool } from "@opencomputer/agent";
 
 export default function Agent() {
-  const report = useInput().text ?? ""; // the file also reads payload.report (webhooks)
+  // Omitted here: the file also reads the report from payload.report (webhooks).
+  const report = useInput().text ?? "";
 
   useModel("anthropic/claude-sonnet-4.6");
 
   if (report.includes("github.com/")) {
     // A repository is named: attach the harness's shell and filesystem.
-    useTool("shell"); // the file also selects read, write, glob, grep
+    // Omitted here: the file also selects read, write, glob, grep.
+    useTool("shell");
     return reproductionPrompt(report);
   } else {
     // No repository: conversation. The model request carries no tools.
@@ -44,13 +46,14 @@ export default function Agent() {
   }
 }
 
-// Prompts omitted; see agent.ts.
+// Omitted here: the prompt text. See agent.ts.
 function conversationPrompt(text: string) { return `…`; }
 function reproductionPrompt(report: string) { return `…`; }
 ```
 
 ```json
-// opencomputer/agents/bug-repro/opencode.json, simplified: the file also registers read, write, glob, grep
+// Simplified excerpt of opencomputer/agents/bug-repro/opencode.json.
+// Omitted here: the file also registers read, write, glob, grep.
 { "tools": { "shell": true }, "permission": { "shell": "allow" } }
 ```
 
